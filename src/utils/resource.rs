@@ -17,6 +17,18 @@ pub struct PieceController {
 }
 
 #[derive(Resource, Default)]
+pub struct PlayerMoveCount(pub i32);
+
+#[derive(Resource, Default)]
+pub struct AIMoveCount(pub i32);
+
+#[derive(Resource, Default)]
+pub struct PlayerScore(pub i32);
+
+#[derive(Resource, Default)]
+pub struct AIScore(pub i32);
+
+#[derive(Resource, Default)]
 pub struct RefillColumnTimer(pub Timer);
 
 #[derive(Resource, Default)]
@@ -30,3 +42,13 @@ pub struct CollapseTimer(pub Timer);
 
 #[derive(Resource, Default)]
 pub struct DestroyPieceTimer(pub Timer);
+
+#[derive(Resource, Default)]
+pub struct AIMoveTimer(pub Timer);
+
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CurrentPlayerTurn {
+    #[default]
+    Player,
+    AI,
+}

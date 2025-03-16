@@ -1,10 +1,14 @@
+use ai::ai::AI;
 use bevy::prelude::*;
 use grid::base_grid::Grid;
 use piece::base_piece::BasePiece;
+use ui::ui_manager::UIPlugin;
 use utils::{event, resource};
 
+pub mod ai;
 pub mod grid;
 pub mod piece;
+pub mod ui;
 pub mod utils;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
@@ -40,7 +44,7 @@ fn main() {
         .add_systems(
             Update,
             (
-                Grid::mouse_input,
+                (Grid::mouse_input).run_if(in_state(resource::CurrentPlayerTurn::Player)),
                 Grid::swap_pieces,
                 BasePiece::update_piece_positions,
             )
@@ -71,14 +75,22 @@ fn main() {
                 .after(GamePlaySet::MatchDetection),
         )
         .add_systems(Update, Grid::swap_back)
+        .add_systems(
+            Update,
+            (AI::find_possible_match).run_if(in_state(resource::CurrentPlayerTurn::AI)),
+        )
         //plugin
-        .add_plugins(BackgroundPlugin)
+        .add_plugins((BackgroundPlugin, UIPlugin))
         //events
         .add_event::<event::SwapPiecesEvent>()
         .add_event::<event::SwapBackEvent>()
         //resources
         .insert_resource(resource::CollapseTimer(Timer::from_seconds(
             1.0,
+            TimerMode::Repeating,
+        )))
+        .insert_resource(resource::AIMoveTimer(Timer::from_seconds(
+            3.0,
             TimerMode::Repeating,
         )))
         .insert_resource(resource::DestroyPieceTimer(Timer::from_seconds(
@@ -96,12 +108,20 @@ fn main() {
         .init_resource::<resource::SwapBackInfo>()
         .init_resource::<resource::PieceController>()
         .init_resource::<resource::Touch>()
+        .init_resource::<resource::PlayerMoveCount>()
+        .init_resource::<resource::PlayerScore>()
+        .init_resource::<resource::AIScore>()
+        .init_resource::<resource::AIMoveCount>()
         //state
         .init_state::<SwapBackState>()
+        .init_state::<resource::CurrentPlayerTurn>()
         .run();
 }
 
-fn base_setup(mut commands: Commands) {
+fn base_setup(
+    mut commands: Commands,
+    current_player_state: Res<State<resource::CurrentPlayerTurn>>,
+) {
     commands.spawn((
         Camera2d,
         Transform {
@@ -109,6 +129,7 @@ fn base_setup(mut commands: Commands) {
             ..default()
         },
     ));
+    eprintln!("Current state: {:?}", current_player_state.get());
 }
 
 #[derive(Component)]
@@ -127,7 +148,7 @@ impl Background {
     fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         commands.spawn((
             Background,
-            Sprite::from_image(asset_server.load("ui/backgrounds/background1.png")),
+            Sprite::from_image(asset_server.load("ui/backgrounds/lol_proto_bg2.png")),
             Transform {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 ..Default::default()

@@ -1,0 +1,10 @@
+[workspace]
+name = "lol-prototype"
+
+[storage]
+repository = "solana"
+
+[solana]
+store = "3QqtPd3n7KijMFK2wbaSaazj2D9nGkRKM7rKNX9vP8jH"
+rpc = "https://testnet.sonic.game"
+keypair = "./rush-keypair.json"

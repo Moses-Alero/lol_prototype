@@ -1,0 +1,10 @@
+[world]
+name = "My Onchain World"
+description = "My Onchain World Description"
+entities = ["player"]
+regions = ["base"]
+
+[entity]
+player = { name = "String", x ="f64", y = "f64"}
+
+[base]

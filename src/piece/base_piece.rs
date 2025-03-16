@@ -1,4 +1,5 @@
 use crate::grid::base_grid::Grid;
+use crate::utils::resource::CurrentPlayerTurn;
 use crate::utils::{constant, event, resource};
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -31,10 +32,13 @@ impl BasePiece {
     pub fn set_color_path() -> HashMap<BaseColor, String> {
         let mut base_color_path: HashMap<BaseColor, String> = HashMap::new();
 
-        base_color_path.insert(BaseColor::Blue, String::from("pieces/blue_piece.png"));
-        base_color_path.insert(BaseColor::Green, String::from("pieces/green_piece.png"));
-        base_color_path.insert(BaseColor::Yellow, String::from("pieces/yellow_piece.png"));
-        base_color_path.insert(BaseColor::Pink, String::from("pieces/pink_piece.png"));
+        base_color_path.insert(BaseColor::Blue, String::from("pieces/nft/de_god_4454.png"));
+        base_color_path.insert(BaseColor::Green, String::from("pieces/nft/de_god_1065.png"));
+        base_color_path.insert(
+            BaseColor::Yellow,
+            String::from("pieces/nft/de_god_6681.png"),
+        );
+        base_color_path.insert(BaseColor::Pink, String::from("pieces/nft/de_god_7681.png"));
 
         return base_color_path;
     }
@@ -74,8 +78,11 @@ impl BasePiece {
         mut commands: Commands,
         time: Res<Time>,
         mut timer: ResMut<resource::DestroyPieceTimer>,
+        mut moves: ResMut<resource::PlayerMoveCount>,
+        mut player_score: ResMut<resource::PlayerScore>,
         mut swap_back: ResMut<resource::SwapBackInfo>,
         mut ev_swap_back: EventWriter<event::SwapBackEvent>,
+        player_state: Res<State<resource::CurrentPlayerTurn>>,
         mut grid_query: Query<&mut Grid>,
     ) {
         if timer.0.tick(time.delta()).just_finished() {
@@ -96,12 +103,23 @@ impl BasePiece {
                     }
                 }
             }
-            if !match_found && swap_back.count == 1 {
-                ev_swap_back.send(event::SwapBackEvent {
-                    row: swap_back.p2.y as i32,
-                    column: swap_back.p2.x as i32,
-                    direction: swap_back.dir * -1.0,
-                });
+            match player_state.get() {
+                resource::CurrentPlayerTurn::Player => {
+                    if !match_found && swap_back.count == 1 {
+                        if moves.0 > 0 {
+                            moves.0 -= 1;
+                        }
+                        ev_swap_back.send(event::SwapBackEvent {
+                            row: swap_back.p2.y as i32,
+                            column: swap_back.p2.x as i32,
+                            direction: swap_back.dir * -1.0,
+                        });
+                    }
+                    if match_found {
+                        player_score.0 += 1;
+                    }
+                }
+                resource::CurrentPlayerTurn::AI => {}
             }
         }
     }

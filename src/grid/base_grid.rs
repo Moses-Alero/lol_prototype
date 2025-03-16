@@ -61,7 +61,7 @@ impl Grid {
                     piece,
                     Transform {
                         translation: piece_position,
-                        scale: Vec3::new(0.3, 0.3, 0.),
+                        scale: Vec3::new(0.021, 0.021, 0.),
                         ..Default::default()
                     },
                     Sprite::from_image(piece_path),
@@ -154,6 +154,7 @@ impl Grid {
         q_camera: Query<(&Camera, &GlobalTransform)>,
         mouse: Res<ButtonInput<MouseButton>>,
         mut controller: ResMut<resource::PieceController>,
+        mut moves: ResMut<resource::PlayerMoveCount>,
         mut touch: ResMut<resource::Touch>,
     ) {
         let mut grid = grid_query.single_mut();
@@ -185,7 +186,10 @@ impl Grid {
                             touch.last = Vec2::new(column as f32, row as f32);
                             //check if the position is in the grid
                             if Grid::is_in_grid(row, column) && controller.controlling {
-                                grid.touch_diff(ev_swap_piece, touch.first, touch.last);
+                                if moves.0 < constant::MAX_PLAYER_MOVE {
+                                    moves.0 += 1;
+                                    grid.touch_diff(ev_swap_piece, touch.first, touch.last);
+                                }
                                 controller.controlling = false;
                             }
                         }
@@ -551,6 +555,10 @@ impl Grid {
         mut commands: Commands,
         time: Res<Time>,
         mut timer: ResMut<resource::RefillColumnTimer>,
+        mut ai_moves: ResMut<resource::AIMoveCount>,
+        mut moves: ResMut<resource::PlayerMoveCount>,
+        player_state: Res<State<resource::CurrentPlayerTurn>>,
+        mut next_state: ResMut<NextState<resource::CurrentPlayerTurn>>,
         mut grid_query: Query<&mut Grid>,
         asset_server: Res<AssetServer>,
     ) {
@@ -593,13 +601,35 @@ impl Grid {
                                 piece,
                                 Transform {
                                     translation: piece_position,
-                                    scale: Vec3::new(0.3, 0.3, 0.),
+                                    scale: Vec3::new(0.021, 0.021, 0.),
                                     ..Default::default()
                                 },
                                 Sprite::from_image(piece_path),
                             ));
                             grid.entities[row as usize][col as usize] =
                                 Some(piece_entity_commands.id());
+                        }
+                    }
+                }
+            }
+            for _ in 0..grid.width {
+                for col in 0..grid.height {
+                    if grid.cell[(constant::GRID_WIDTH - 1) as usize][col as usize].is_none() {
+                        continue;
+                    } else {
+                        match player_state.get() {
+                            resource::CurrentPlayerTurn::Player => {
+                                if moves.0 >= constant::MAX_PLAYER_MOVE {
+                                    ai_moves.0 = 0;
+                                    next_state.set(resource::CurrentPlayerTurn::AI);
+                                }
+                            }
+                            resource::CurrentPlayerTurn::AI => {
+                                if ai_moves.0 >= constant::MAX_AI_MOVE {
+                                    moves.0 = 0;
+                                    next_state.set(resource::CurrentPlayerTurn::Player);
+                                }
+                            }
                         }
                     }
                 }
